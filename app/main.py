@@ -1,20 +1,35 @@
 import uvicorn
-from fastapi import FastAPI, Depends
-from routes.v1.users import router as v1_users_router
+import os
+from fastapi import FastAPI, Depends, HTTPException
 from dotenv import load_dotenv
+from database import db
+from typing import Annotated
+from starlette import status
 
-from utils import format_response
-from database import users, db
-from bson import ObjectId
+# Import routers
+from routes.v1.auth import router as v1_auth_router
+from routes.v1.auth import validate_user, get_current_user
 
 # Load environment variables
 load_dotenv()
 
-# Initialize the FastAPI application with the lifespan function
+# Initialize the FastAPI
 app = FastAPI()
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 # Include routers
-app.include_router(v1_users_router, prefix="/v1/users", tags=["users-v1"])
+app.include_router(v1_auth_router, prefix="/v1/auth", tags=["auth-v1"])
+
+
+@app.get("/test-user", status_code=status.HTTP_200_OK)
+async def get_users(user: user_dependency):
+    """
+    Get current users.
+    """
+    validate_user(user)
+
+    return {"message": "User found"}
+
 
 @app.get("/")
 async def root():
@@ -23,8 +38,8 @@ async def root():
     """
     version = os.getenv("VERSION")
     if not version:
-        return format_response("Internal server error", 500)
-    return format_response(version, 200)
+        return {"message": "No version found.", "status": status.HTTP_400_BAD_REQUEST}
+    return {"version": version, "status": status.HTTP_200_OK}
 
 
 if __name__ == "__main__":

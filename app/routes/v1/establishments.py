@@ -45,5 +45,103 @@ async def create_establishment(
     print(new_establishment, new_establishment.inserted_id)
     return {
         "message": "Establishment created successfully",
-        "establishment id": 123123,
+        "establishment_id": 123123,
+        "status_code": status.HTTP_201_CREATED,
     }
+
+
+@router.get("/", status_code=status.HTTP_201_CREATED)
+async def get_establishments(user: user_dependency):
+    """
+    Get all establishments.
+    """
+    user_data = await validate_user(user)
+    print(user_data["user_id"])
+    try:
+
+        establishments_list = establishments.find({"owner_id": user_data["user_id"]})
+        return {
+            "message": "Establishments found",
+            "establishments": [
+                establishments_helper(establishment)
+                for establishment in list(establishments_list)
+            ],
+            "status_code": status.HTTP_201_CREATED,
+        }
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No establishments found",
+        )
+
+
+@router.get("/{establishment_id}", status_code=status.HTTP_201_CREATED)
+async def get_establishment(establishment_id: str, user: user_dependency):
+    """
+    Get a single establishment.
+    """
+    user_data = await validate_user(user)
+    establishment_id = ObjectId(establishment_id)
+    try:
+        establishment = establishments.find_one({"_id": establishment_id})
+        return {
+            "message": "Establishment found",
+            "establishment": establishments_helper(establishment),
+            "status_code": status.HTTP_201_CREATED,
+        }
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No establishment found",
+        )
+
+
+@router.put("/{establishment_id}", status_code=status.HTTP_201_CREATED)
+async def update_establishment(
+    establishment_id: str,
+    user: user_dependency,
+    name: str = Form(...),
+    logo: UploadFile = File(...),
+):
+    """
+    Update an establishment.
+    """
+    user_data = await validate_user(user)
+    establishment_id = ObjectId(establishment_id)
+    logo_b64 = await convert_file_to_base64(logo)
+    try:
+        establishment = {
+            "name": name,
+            "owner_id": user_data["user_id"],
+            "logo": logo_b64,
+        }
+        establishments.update_one({"_id": establishment_id}, {"$set": establishment})
+        return {
+            "message": "Establishment updated successfully",
+            "status_code": status.HTTP_201_CREATED,
+        }
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No establishment found",
+        )
+
+
+@router.delete("/{establishment_id}", status_code=status.HTTP_201_CREATED)
+async def delete_establishment(establishment_id: str, user: user_dependency):
+    """
+    Delete an establishment.
+    """
+    user_data = await validate_user(user)
+    establishment_id = ObjectId(establishment_id)
+    try:
+        establishments.delete_one({"_id": establishment_id})
+        return {
+            "message": "Establishment deleted successfully",
+            "status_code": status.HTTP_201_CREATED,
+        }
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No establishment found",
+        )

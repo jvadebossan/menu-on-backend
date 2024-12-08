@@ -35,12 +35,7 @@ def create_jwt_token(email: str, user_id: str, expires_delta: timedelta):
 # Validate the token and return the user
 async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload["user_id"]
-        user = users.find_one({"_id": ObjectId(user_id)})
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user_helper(user)
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
 
@@ -52,7 +47,7 @@ async def validate_user(user: Annotated[dict, Depends(get_current_user)]):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized",
         )
-    return {"user": user}
+    return user
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)

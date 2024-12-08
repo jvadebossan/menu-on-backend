@@ -9,6 +9,7 @@ from starlette import status
 # Import routers
 from routes.v1.auth import router as v1_auth_router
 from routes.v1.auth import validate_user, get_current_user
+from routes.v1.establishments import router as v1_establishments_router
 
 # Load environment variables
 load_dotenv()
@@ -19,6 +20,9 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 
 # Include routers
 app.include_router(v1_auth_router, prefix="/v1/auth", tags=["auth-v1"])
+app.include_router(
+    v1_establishments_router, prefix="/v1/establishments", tags=["establishments-v1"]
+)
 
 
 @app.get("/test-user", status_code=status.HTTP_200_OK)
@@ -26,9 +30,9 @@ async def get_users(user: user_dependency):
     """
     Get current users.
     """
-    validate_user(user)
+    user_data = await validate_user(user)
 
-    return {"message": "User found"}
+    return {"message": "User found", "user": user_data}
 
 
 @app.get("/")

@@ -14,3 +14,4 @@ client = MongoClient(MONGODB_URL, server_api=ServerApi("1"))
 
 db = client[MONGODB_DB_NAME]
 users = db["users"]
+establishments = db["establishments"]

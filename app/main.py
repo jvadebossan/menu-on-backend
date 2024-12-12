@@ -1,8 +1,7 @@
 import uvicorn
 import os
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from dotenv import load_dotenv
-from database import db
 from typing import Annotated
 from starlette import status
 
@@ -13,6 +12,8 @@ from routes.v1.establishments import router as v1_establishments_router
 
 # Load environment variables
 load_dotenv()
+environment = version = os.getenv("ENVIRONMENT")
+host = version = os.getenv("HOST")
 
 # Initialize the FastAPI
 app = FastAPI()
@@ -49,7 +50,7 @@ async def root():
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        host="127.0.0.1",
-        reload=True,
-        port=8000,
+        host=host,
+        reload=True if environment == "dev" else False,
+        port=80,
     )

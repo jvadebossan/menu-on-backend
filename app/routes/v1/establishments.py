@@ -31,8 +31,6 @@ async def create_establishment(
     Create a new establishment.
     """
     user_data = await validate_user(user)
-    print(user_data)
-    print(name)
     logo_b64 = await convert_file_to_base64(logo)
 
     establishment = {
@@ -42,7 +40,6 @@ async def create_establishment(
         "logo": logo_b64,
     }
     new_establishment = establishments.insert_one(establishment)
-    print(new_establishment, new_establishment.inserted_id)
     return {
         "message": "Establishment created successfully",
         "establishment_id": 123123,
@@ -56,7 +53,6 @@ async def get_establishments(user: user_dependency):
     Get all establishments.
     """
     user_data = await validate_user(user)
-    print(user_data["user_id"])
     try:
 
         establishments_list = establishments.find({"owner_id": user_data["user_id"]})

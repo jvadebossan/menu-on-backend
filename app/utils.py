@@ -1,22 +1,28 @@
-import base64
-from fastapi import File, UploadFile
+import requests
+import os
+from dotenv import load_dotenv
+from fastapi import UploadFile
+
+# Load env variables
+load_dotenv()
+square_api_key = os.getenv("SQUARE_API_KEY")
 
 
-async def convert_file_to_base64(file: UploadFile) -> str:
+def upload_photo(file_name: str, file: UploadFile):
     """
-    Converts an UploadFile object to a Base64-encoded string.
-
-    Args:
-        file (UploadFile)
-
-    Returns:
-        str: Base64-encoded string
+    Upload a photo to the Square Cloud Blob Storage.
     """
-    try:
-        file_content = await file.read()
 
-        base64_encoded = base64.b64encode(file_content).decode("utf-8")
+    url = "https://blob.squarecloud.app/v1/objects"
 
-        return base64_encoded
-    except:
-        return None
+    querystring = {"name": str(file_name)}
+    payload = {"file": file}
+    headers = {"Authorization": square_api_key, "Content-Type": "application/json"}
+
+    with file.file as file_stream:
+        files = {"file": (file.filename, file_stream, file.content_type)}
+
+        response = requests.post(
+            url, files=files, headers=headers, params=querystring
+        ).json()
+    return response

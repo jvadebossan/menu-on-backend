@@ -68,11 +68,18 @@ async def create_user(create_user_request: CreateUserRequest):
     result = users.insert_one(user)
 
     print(f"Creating user: {user}")
-    return {"message": "User created successfully"}
+    return {
+        "message": "User created successfully",
+        "user_id": str(result.inserted_id),
+        "status_code": status.HTTP_201_CREATED,
+    }
 
 
 @router.post("/login", response_model=Token)
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    """
+    Login a user.
+    """
     user = users.find_one({"email": form_data.username})
     if not user or not bcrypt_context.verify(form_data.password, user["password"]):
         raise HTTPException(
@@ -85,4 +92,9 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     expires = timedelta(minutes=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
     token = create_jwt_token(user["email"], str(user["_id"]), expires)
 
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "message": "Login successful",
+        "access_token": token,
+        "token_type": "bearer",
+        "status_code": status.HTTP_201_CREATED,
+    }

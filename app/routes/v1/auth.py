@@ -67,7 +67,6 @@ async def create_user(create_user_request: CreateUserRequest):
     user["password"] = bcrypt_context.hash(create_user_request.password)
     result = users.insert_one(user)
 
-    print(f"Creating user: {user}")
     return {
         "message": "User created successfully",
         "user_id": str(result.inserted_id),

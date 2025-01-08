@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 from bson import ObjectId
 from typing import Annotated, Dict
-from utils import upload_photo
+from utils import upload_photo, normalize_file_name, validate_id
 import logging
 
 
@@ -33,27 +33,33 @@ async def create_establishment(
     Create a new establishment.
     """
     user_data = await validate_user(user)
-    file_name = name.lower().replace(" ", "_")
+
+    name_alias = name.lower().replace(" ", "-")
+    file_name = normalize_file_name(name)
+
+    establishment = {
+        "name": name,
+        "name_alias": name_alias,
+        "created_at": created_at,
+        "owner_id": user_data["user_id"],
+    }
 
     try:
         logo_url = upload_photo(file_name, logo)["response"]["url"]
-        establishment = {
-            "name": name,
-            "created_at": created_at,
-            "owner_id": user_data["user_id"],
-            "logo": logo_url,
-        }
-        new_establishment = establishments.insert_one(establishment)
-        return {
-            "message": "Establishment created successfully",
-            "establishment_id": str(new_establishment.inserted_id),
-            "status_code": status.HTTP_201_CREATED,
-        }
+        establishment["logo"] = logo_url
     except:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Error creating establishment (image).",
         )
+
+    new_establishment = establishments.insert_one(establishment)
+
+    return {
+        "message": "Establishment created successfully",
+        "establishment_id": str(new_establishment.inserted_id),
+        "status_code": status.HTTP_201_CREATED,
+    }
 
 
 @router.get("/", status_code=status.HTTP_201_CREATED)
@@ -86,26 +92,28 @@ async def get_establishment(establishment_id: str, user: user_dependency):
     Get a single establishment.
     """
     user_data = await validate_user(user)
-    establishment_id = ObjectId(establishment_id)
+    
     try:
+        establishment_id = ObjectId(establishment_id)
         establishment = establishments.find_one({"_id": establishment_id})
-        return {
-            "message": "Establishment found",
-            "establishment": establishments_helper(establishment),
-            "status_code": status.HTTP_201_CREATED,
-        }
     except:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No establishment found",
         )
+    
+    return {
+        "message": "Establishment found",
+        "establishment": establishments_helper(establishment),
+        "status_code": status.HTTP_201_CREATED,
+    }
 
 
 @router.put("/{establishment_id}", status_code=status.HTTP_200_OK)
 async def update_establishment(
     establishment_id: str,
     user: user_dependency,
-    name: str = Form(...),
+    name: str = Form(None),
     logo: UploadFile = File(None),
 ):
     """
@@ -114,21 +122,17 @@ async def update_establishment(
 
     user_data = await validate_user(user)
 
-    # Validate establishment_id
-    if not ObjectId.is_valid(establishment_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid establishment ID format",
-        )
-    establishment_id = ObjectId(establishment_id)
-
     update_fields = {
         "name": name,
     }
 
+    # validate if fields are not empty
+    update_fields = {
+        key: value for key, value in update_fields.items() if value is not None
+    }
     if logo:
         try:
-            file_name = name.lower().replace(" ", "_")
+            file_name = normalize_file_name(name)
             logo_url = upload_photo(file_name, logo)["response"]["url"]
             update_fields["logo"] = logo_url
         except Exception as e:
@@ -138,14 +142,15 @@ async def update_establishment(
                 detail="Error uploading logo",
             )
 
-    update_result = establishments.update_one(
-        {"_id": establishment_id}, {"$set": update_fields}
-    )
-
-    if update_result.matched_count == 0:
+    # validate if the establishment exists
+    try:
+        update_result = establishments.update_one(
+            {"_id": ObjectId(establishment_id)}, {"$set": update_fields}
+        )
+    except:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Establishment not found",
+            detail="No establishment found",
         )
 
     return {
@@ -161,15 +166,16 @@ async def delete_establishment(establishment_id: str, user: user_dependency):
     Delete an establishment.
     """
     user_data = await validate_user(user)
-    establishment_id = ObjectId(establishment_id)
+    
     try:
+        establishment_id = ObjectId(establishment_id)
         establishments.delete_one({"_id": establishment_id})
-        return {
-            "message": "Establishment deleted successfully",
-            "status_code": status.HTTP_201_CREATED,
-        }
     except:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No establishment found",
         )
+    return {
+        "message": "Establishment deleted successfully",
+        "status_code": status.HTTP_201_CREATED,
+    }

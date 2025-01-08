@@ -6,9 +6,10 @@ from typing import Annotated
 from starlette import status
 
 # Import routers
-from routes.v1.auth import router as v1_auth_router
 from routes.v1.auth import validate_user, get_current_user
+from routes.v1.auth import router as v1_auth_router
 from routes.v1.establishments import router as v1_establishments_router
+from routes.v1.categories import router as v1_categories_router
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +24,9 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 app.include_router(v1_auth_router, prefix="/v1/auth", tags=["auth-v1"])
 app.include_router(
     v1_establishments_router, prefix="/v1/establishments", tags=["establishments-v1"]
+)
+app.include_router(
+    v1_categories_router, prefix="/v1/categories", tags=["categories-v1"]
 )
 
 
